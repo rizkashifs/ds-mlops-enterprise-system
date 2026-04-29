@@ -1,0 +1,25 @@
+# Inference (scoring) pipeline configuration.
+
+model:
+  registry_name: "churn-rf"
+  stage: "Production"          # MLflow stage: Production, Staging, Archived
+  # Alternatively, pin to a specific URI:
+  # uri: "runs:/abc123/model"
+
+scoring:
+  mode: batch                  # batch | online
+  batch_output_path: "outputs/scores/"  # Override with MLOPS_SCORING_OUTPUT_PATH
+  output_columns:
+    - prediction
+    - probability
+
+data:
+  contract: churn_features_v1
+  contract_version: "1.0"
+  exclude_columns:
+    - target                   # Drop label column before scoring
+
+monitoring:
+  log_score_distribution: true
+  psi_baseline_path: "artifacts/psi_baseline.parquet"
+  psi_alert_threshold: 0.20

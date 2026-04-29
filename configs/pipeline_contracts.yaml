@@ -1,0 +1,65 @@
+# Pipeline contracts — the single source of truth for all dataset schemas.
+# Every pipeline that reads a dataset MUST validate against the contract defined here.
+# Versioning rules: minor = additive/backwards-compatible, major = breaking change.
+
+contracts:
+
+  churn_features_v1:
+    version: "1.0"
+    owner: data-engineering
+    description: Customer-level features for monthly churn prediction
+    columns:
+      - name: tenure_months
+        dtype: numeric
+        nullable: false
+        description: Months since account creation
+      - name: monthly_charges
+        dtype: numeric
+        nullable: false
+        description: Average monthly spend over last 3 months
+      - name: num_products
+        dtype: numeric
+        nullable: false
+        description: Count of active products on the account
+      - name: support_calls_90d
+        dtype: numeric
+        nullable: false
+        description: Number of inbound support contacts in last 90 days
+      - name: target
+        dtype: numeric
+        nullable: false
+        description: "1 = churned within 30 days of scoring date, 0 = retained"
+
+  marketing_propensity_v1:
+    version: "1.0"
+    owner: data-engineering
+    description: Customer features for marketing campaign response propensity
+    columns:
+      - name: customer_age_years
+        dtype: numeric
+        nullable: false
+        description: Customer age in years at time of scoring
+      - name: account_tenure_months
+        dtype: numeric
+        nullable: false
+        description: Months since account creation
+      - name: total_spend_ltm
+        dtype: numeric
+        nullable: false
+        description: Total spend over last 12 months
+      - name: campaign_contacts_ytd
+        dtype: numeric
+        nullable: false
+        description: Number of marketing contacts year-to-date
+      - name: last_purchase_days_ago
+        dtype: numeric
+        nullable: true
+        description: Days since last purchase; null if no prior purchase
+      - name: channel_preference
+        dtype: categorical
+        nullable: true
+        description: "Preferred contact channel: email, sms, push, none"
+      - name: target
+        dtype: numeric
+        nullable: false
+        description: "1 = responded to campaign, 0 = did not respond"
