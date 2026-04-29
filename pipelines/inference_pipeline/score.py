@@ -1,7 +1,8 @@
 """Inference pipeline orchestrator.
 
 Loads the production model, scores a DataFrame, runs monitoring checks,
-and writes output. Config-driven — all settings come from configs/inference.yaml.
+evaluates retraining triggers, and writes output.
+Config-driven — all settings come from configs/inference.yaml.
 
 Run with:
   python pipelines/inference_pipeline/score.py
@@ -17,6 +18,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from mlops_platform.monitoring_hooks.hooks import build_monitoring_report
+from mlops_platform.monitoring_hooks.triggers import TriggerConfig, evaluate_triggers
 from mlops_platform.model_registry.registry import get_production_uri
 from src.services.scoring import score_batch
 
@@ -30,16 +32,24 @@ def run_inference_pipeline(
     df: pd.DataFrame,
     model_uri: str = None,
     config_path: str = "configs/inference.yaml",
+    days_since_last_retrain: int = None,
+    baseline_mean_score: float = None,
+    baseline_metrics: dict = None,
+    current_metrics: dict = None,
 ) -> dict:
-    """Load model, score DataFrame, run monitoring, return output.
+    """Load model, score DataFrame, run monitoring, evaluate retrain triggers.
 
     Args:
         df: Input features (must not contain the target column).
         model_uri: If provided, overrides the registry lookup from config.
         config_path: Path to the inference config YAML.
+        days_since_last_retrain: Days since last retrain (for time-based trigger).
+        baseline_mean_score: Mean score at training time (for score shift trigger).
+        baseline_metrics: Validation metrics at training time (for perf drop trigger).
+        current_metrics: Windowed metrics from recent actuals (for perf drop trigger).
 
     Returns:
-        dict with keys: scores_df, monitoring_report, num_records
+        dict with keys: scores_df, monitoring_report, trigger_decision, num_records
     """
     cfg = load_config(config_path)
 
@@ -70,8 +80,34 @@ def run_inference_pipeline(
         for alert in report.alerts:
             print(f"  {alert}")
 
+    # --- Step 5: Evaluate retraining triggers ---
+    trigger_cfg = TriggerConfig(
+        psi_alert_threshold=cfg["monitoring"]["psi_alert_threshold"],
+    )
+    trigger = evaluate_triggers(
+        monitoring_report=report,
+        config=trigger_cfg,
+        days_since_last_retrain=days_since_last_retrain,
+        baseline_mean_score=baseline_mean_score,
+        current_metrics=current_metrics,
+        baseline_metrics=baseline_metrics,
+    )
+
+    if trigger.should_retrain:
+        urgency_label = f"[{trigger.urgency.upper()}]"
+        print(f"\nRETRAIN {urgency_label} triggered by: {trigger.triggered_by}")
+        for reason in trigger.reasons:
+            print(f"  {reason}")
+        # In production: route to alert system or retrain queue based on urgency
+        # if trigger.urgency == "immediate":
+        #     send_alert(...)
+        # else:
+        #     queue_retrain(...)
+
     return {
         "scores_df": result.to_dataframe(),
         "monitoring_report": report,
+        "trigger_decision": trigger,
         "num_records": result.num_records,
     }
+

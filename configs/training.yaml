@@ -32,3 +32,8 @@ data:
 
 artifacts:
   store: "artifacts/"  # Override with MLOPS_ARTIFACT_STORE in cloud envs
+  # These baseline artifacts are saved at training time and loaded by the
+  # inference pipeline to evaluate retraining triggers. See docs/retraining_triggers.md §5.
+  save_psi_baseline: true           # save training feature distributions as parquet
+  psi_baseline_path: "artifacts/psi_baseline.parquet"
+  log_baseline_mean_score: true     # log test-set mean score as MLflow metric

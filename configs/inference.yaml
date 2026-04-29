@@ -23,3 +23,15 @@ monitoring:
   log_score_distribution: true
   psi_baseline_path: "artifacts/psi_baseline.parquet"
   psi_alert_threshold: 0.20
+
+# Retraining trigger thresholds.
+# These feed directly into TriggerConfig in mlops_platform/monitoring_hooks/triggers.py.
+# See docs/retraining_triggers.md for guidance on setting these per use case.
+retraining:
+  triggers:
+    psi_warn_threshold: 0.10       # schedule investigation
+    psi_alert_threshold: 0.20      # trigger immediate retrain
+    score_shift_threshold: 0.10    # relative shift in mean score
+    performance_drop_threshold: 0.05  # absolute pp drop from validation baseline
+    max_days_since_retrain: 60     # time-based safety net
+    min_records_for_drift_check: 500

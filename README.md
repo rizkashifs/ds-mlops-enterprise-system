@@ -64,6 +64,7 @@ ds-mlops-enterprise-system/
 │   ├── lifecycle.md               # The seven layers explained
 │   ├── decision-frameworks.md     # ML vs LLM, Batch vs Real-time, Retraining strategy
 │   ├── failure-modes.md           # What goes wrong and how to prevent it
+│   ├── retraining_triggers.md     # Trigger types, config, priority, integration
 │   ├── mlops_standards.md         # Full MLOps standards reference
 │   ├── model_card_template.md     # Fill-in model card template
 │   ├── data_contract_guide.md     # How to define and use data contracts
@@ -92,9 +93,11 @@ ds-mlops-enterprise-system/
 │   └── retraining_pipeline/retrain.py
 │
 ├── mlops_platform/                # Shared platform tools
-│   ├── experiment_tracking/tracker.py   # Enforces required MLflow logging
-│   ├── model_registry/registry.py       # Model registration and promotion
-│   └── monitoring_hooks/hooks.py        # PSI, score distribution, monitoring reports
+│   ├── experiment_tracking/tracker.py        # Enforces required MLflow logging
+│   ├── model_registry/registry.py            # Model registration and promotion
+│   └── monitoring_hooks/
+│       ├── hooks.py                           # PSI, score distribution, monitoring reports
+│       └── triggers.py                        # Retraining trigger evaluation (4 trigger types)
 │
 ├── templates/                     # Copy-paste starting points for new use cases
 │   ├── tabular_ml_pipeline/       # Standard ML pipeline (copy this first)
