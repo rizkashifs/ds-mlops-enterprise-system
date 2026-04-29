@@ -1,0 +1,8 @@
+pandas
+scikit-learn
+mlflow
+prefect
+pydantic
+pyyaml
+fastapi
+pytest

@@ -1,0 +1,9 @@
+project:
+  name: ds-mlops-enterprise-system
+  environment: local
+standards:
+  pipeline_contracts: configs/pipeline_contracts.yaml
+  model_card_required: true
+storage:
+  artifact_store: artifacts/
+  feature_store: feature-store-placeholder
