@@ -1,0 +1,34 @@
+# Training pipeline configuration.
+# Override per-environment using environment variables (prefix: MLOPS_).
+
+experiment:
+  name: "churn-prediction"
+  tracking_uri: "mlruns"  # Override with MLOPS_TRACKING_URI in non-local envs
+
+model:
+  algorithm: random_forest
+  params:
+    n_estimators: 100
+    max_depth: 5
+    min_samples_leaf: 20
+    class_weight: balanced
+  target_column: target
+  test_size: 0.20
+  random_seed: 42
+
+validation:
+  thresholds:
+    min_accuracy: 0.72
+    min_f1: 0.60
+    min_roc_auc: 0.75
+  require_baseline_comparison: true
+  require_fairness_check: true
+
+data:
+  contract: churn_features_v1
+  contract_version: "1.0"
+  expected_min_rows: 1000
+  expected_max_rows: 10000000
+
+artifacts:
+  store: "artifacts/"  # Override with MLOPS_ARTIFACT_STORE in cloud envs
