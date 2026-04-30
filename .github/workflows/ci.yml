@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [master]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff
+      - run: ruff check .
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt pytest-cov
+      - name: Run tests with coverage
+        run: pytest tests/ -v --cov=src --cov=mlops_platform --cov-report=term-missing --cov-fail-under=60
+        env:
+          PYTHONPATH: .
+          MLFLOW_TRACKING_URI: ""
+
+  validate-contracts:
+    name: Validate configs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install pydantic pyyaml
+      - name: Check pipeline contract YAML parses
+        run: python -c "import yaml; yaml.safe_load(open('configs/pipeline_contracts.yaml'))"
+      - name: Check training config YAML parses
+        run: python -c "import yaml; yaml.safe_load(open('configs/training.yaml'))"

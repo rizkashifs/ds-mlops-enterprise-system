@@ -74,6 +74,21 @@ def build_monitoring_report(
     """
     alerts: List[str] = []
 
+    if scores.empty or len(scores) == 0:
+        alerts.append("CRITICAL: scoring output is empty — pipeline may have failed")
+        report = MonitoringReport(
+            model_name=model_name,
+            scored_at=datetime.now(timezone.utc).isoformat(),
+            num_records=0,
+            mean_score=0.0,
+            p10=0.0,
+            p50=0.0,
+            p90=0.0,
+            p99=0.0,
+            alerts=alerts,
+        )
+        return report
+
     report = MonitoringReport(
         model_name=model_name,
         scored_at=datetime.now(timezone.utc).isoformat(),
@@ -84,9 +99,6 @@ def build_monitoring_report(
         p90=float(np.percentile(scores, 90)),
         p99=float(np.percentile(scores, 99)),
     )
-
-    if scores.empty or len(scores) == 0:
-        alerts.append("CRITICAL: scoring output is empty — pipeline may have failed")
 
     if features_df is not None and baseline_features is not None:
         shared_cols = [c for c in features_df.columns if c in baseline_features.columns]
