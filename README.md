@@ -11,6 +11,23 @@ This repository answers four questions every DS org needs to answer before it ca
 
 ---
 
+## Key Philosophy
+
+Most machine learning systems fail not because of poor models, but because of inconsistent processes and lack of system design.
+
+This repository focuses on standardization, reproducibility, and lifecycle management.
+
+## Why This Matters
+
+Most real-world AI systems fail not due to model performance, but due to:
+- lack of standardization
+- poor observability
+- weak lifecycle management
+
+This repository addresses these challenges through system design and architectural patterns.
+
+---
+
 ## The Seven Layers
 
 ```
@@ -291,3 +308,18 @@ Quick steps:
 | MLflow for tracking | Standard, open, self-hostable; requires infrastructure to run at scale |
 
 See `docs/decisions.md` for formal Architecture Decision Records.
+
+---
+
+## Part of AI Platform
+
+This repository is part of a modular AI platform:
+
+- [ds-mlops-enterprise-system](https://github.com/rizkashifs/ds-mlops-enterprise-system) → defines standards and best practices
+- [mlops-control-plane](https://github.com/rizkashifs/mlops-control-plane) → manages model lifecycle and governance
+- [enterprise-rag-agent-system](https://github.com/rizkashifs/enterprise-rag-agent-system) → GenAI application layer
+- [hybrid-ds-genai-agentic-mlops-system](https://github.com/rizkashifs/hybrid-ds-genai-agentic-mlops-system) → ML + LLM + agentic workflows
+- [ai-observability-and-drift-platform](https://github.com/rizkashifs/ai-observability-and-drift-platform) → monitoring and reliability
+- [multi-model-routing-engine](https://github.com/rizkashifs/multi-model-routing-engine) → model selection and optimization
+
+These repositories together represent an enterprise-grade AI system.
