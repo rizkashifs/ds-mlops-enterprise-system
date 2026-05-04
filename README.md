@@ -6,7 +6,7 @@ This repository answers four questions every DS org needs to answer before it ca
 
 1. **How do we build models?** → `standards/`, `src/`, `pipelines/`
 2. **How do we deploy them?** → `standards/deployment.md`, `templates/`
-3. **How do we ensure consistency across teams?** → `docs/`, `configs/`, `platform/`
+3. **How do we ensure consistency across teams?** → `docs/`, `configs/`, `standards/`
 4. **How do we avoid common failures?** → `docs/failure-modes.md`, `docs/decision-frameworks.md`
 
 ---
@@ -62,20 +62,24 @@ ds-mlops-enterprise-system/
 │
 ├── docs/                          # System documentation
 │   ├── lifecycle.md               # The seven layers explained
-│   ├── decision-frameworks.md     # ML vs LLM, Batch vs Real-time, Retraining strategy
+│   ├── decision-frameworks.md     # 18 critical ML decisions with frameworks
 │   ├── failure-modes.md           # What goes wrong and how to prevent it
 │   ├── retraining_triggers.md     # Trigger types, config, priority, integration
+│   ├── architecture.md            # System architecture, data flow, component map
+│   ├── decisions.md               # Architecture Decision Records (ADRs)
+│   ├── glossary.md                # Shared vocabulary for all roles
+│   ├── onboarding.md              # New team checklist — from scoping to production
 │   ├── mlops_standards.md         # Full MLOps standards reference
 │   ├── model_card_template.md     # Fill-in model card template
 │   ├── data_contract_guide.md     # How to define and use data contracts
-│   ├── runbook.md                 # Day-2 operations playbook
-│   └── architecture.md            # Architecture notes
+│   └── runbook.md                 # Day-2 operations playbook
 │
-├── standards/                     # Team coding and process standards
+├── standards/                     # Org-wide standards — every team follows these
 │   ├── coding.md                  # Code style, naming, testing, config-driven design
 │   ├── experimentation.md         # MLflow logging requirements, experiment hygiene
 │   ├── deployment.md              # Deployment patterns, pre-deploy checklist, API contracts
-│   └── monitoring.md              # What to monitor, PSI, alert thresholds
+│   ├── monitoring.md              # What to monitor, PSI, alert thresholds
+│   └── git-and-release.md         # Branching, commits, CI/CD, environments, model versioning
 │
 ├── src/                           # Reusable core modules
 │   ├── core/
@@ -135,11 +139,25 @@ Before writing any code, read `docs/decision-frameworks.md`. It answers:
 
 | Question | Where |
 |---|---|
-| Should I use ML or an LLM? | `docs/decision-frameworks.md` §1 |
-| Should I use batch or real-time inference? | `docs/decision-frameworks.md` §2 |
-| When and how should I retrain? | `docs/decision-frameworks.md` §3 |
-| Should I build or buy? | `docs/decision-frameworks.md` §4 |
-| Do I need a simple or complex model? | `docs/decision-frameworks.md` §5 |
+| Should I use ML or an LLM? | §1 |
+| Should I use batch or real-time inference? | §2 |
+| When and how should I retrain? | §3 |
+| Should I build or buy? | §4 |
+| Do I need a simple or complex model? | §5 |
+| Should I use rules, ML, or LLMs? | §7 |
+| How do I set the right decision threshold? | §8 |
+| How much labeled data do I need? | §9 |
+| How do I handle class imbalance? | §10 |
+| Should I build one model or segment it? | §11 |
+| How do I safely roll out a new model? | §12 |
+| Do I need explainability? | §13 |
+| How do I handle label delay? | §14 |
+| Do I need human-in-the-loop? | §15 |
+| How do I test before going live? | §16 |
+| How do I handle missing data? | §17 |
+| Do I need a GPU? | §18 |
+
+All 18 frameworks are in `docs/decision-frameworks.md`.
 
 ---
 
@@ -151,6 +169,7 @@ Before writing any code, read `docs/decision-frameworks.md`. It answers:
 | Experimentation | Required MLflow logs, experiment naming, reproducibility | `standards/experimentation.md` |
 | Deployment | Patterns, pre-deploy checklist, API versioning, rollback | `standards/deployment.md` |
 | Monitoring | PSI, prediction distribution, alerts, dashboards | `standards/monitoring.md` |
+| Git & Release | Branching strategy, commit format, CI/CD, environments, model versioning | `standards/git-and-release.md` |
 
 ---
 
@@ -217,13 +236,15 @@ Read `docs/failure-modes.md` before your first production deployment. The top 3:
 
 ## Adding a New Use Case
 
-1. Copy `templates/tabular_ml_pipeline/` to `examples/{your-use-case}/`
+See `docs/onboarding.md` for the full checklist — from scoping to production.
+
+Quick steps:
+1. Work through the scoping questions in `docs/onboarding.md §4`
 2. Define your data contract and add it to `configs/pipeline_contracts.yaml`
-3. Fill in your feature engineering in `encode_features()`
-4. Set thresholds in `configs/training.yaml`
-5. Fill out `docs/model_card_template.md`
-6. Run the pipeline and verify: contract passes, training runs, validation passes
-7. Follow `docs/mlops_standards.md` §13 checklist for production
+3. Copy `templates/tabular_ml_pipeline/` to `pipelines/{your-use-case}/`
+4. Fill in feature engineering; set thresholds in `configs/training.yaml`
+5. Fill out the `ModelCard` fields before promoting past EXPERIMENTAL
+6. Follow `standards/deployment.md` pre-deployment checklist before going to production
 
 ---
 
