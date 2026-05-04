@@ -3,7 +3,12 @@
 
 experiment:
   name: "churn-prediction"
-  tracking_uri: "mlruns"  # Override with MLOPS_TRACKING_URI in non-local envs
+  tracking_uri: "mlruns"   # Used only when MLOPS_TRACKER=mlflow
+
+# Tracker backend: local (default) | mlflow | none
+# Override with MLOPS_TRACKER environment variable
+tracker:
+  backend: local
 
 model:
   algorithm: random_forest

@@ -1,8 +1,20 @@
-pandas
-scikit-learn
-mlflow
-prefect
-pydantic
-pyyaml
-fastapi
-pytest
+# Core — required for all pipelines
+pandas>=2.0
+scikit-learn>=1.4       # includes joblib
+pydantic>=2.0
+pyyaml>=6.0
+
+# Experiment tracking — install the backend you use (choose one or none)
+# mlflow>=2.0           # pip install mlflow         → MLflowTracker
+#                       # No install needed           → LocalFileTracker (default)
+
+# Serving — required only if using the FastAPI template
+# pip install "fastapi[standard]"   → includes uvicorn and pydantic
+
+# Data versioning — optional (see standards/data-versioning.md)
+# dvc>=3.0              # pip install dvc             → local or remote data versioning
+# dvc[s3]               # pip install "dvc[s3]"       → DVC with S3 remote
+
+# Dev and testing
+pytest>=8.0
+ruff>=0.4.0

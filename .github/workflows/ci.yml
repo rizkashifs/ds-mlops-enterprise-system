@@ -1,0 +1,77 @@
+name: CI
+
+# Runs on every push to a feature branch and every PR to master.
+# No merge without a passing CI run.
+#
+# This is the GitHub Actions reference implementation of the CI standards
+# defined in standards/git-and-release.md §5.
+#
+# Translating to other platforms:
+#   Jenkins:      see standards/git-and-release.md §5 — Jenkins equivalent
+#   Azure DevOps: replace jobs with stages, steps with tasks (same logical flow)
+#   AWS CodeBuild: use buildspec.yml with the same install/lint/test phases
+#   GitLab CI:    translate jobs to .gitlab-ci.yml stages
+
+on:
+  push:
+    branches-ignore:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  lint-and-test:
+    name: Lint and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install core dependencies
+        # Core only — no mlflow, no fastapi. CI must pass without optional deps.
+        run: |
+          pip install pandas scikit-learn pydantic pyyaml pytest ruff
+
+      - name: Lint (ruff)
+        run: ruff check src/ tests/ pipelines/ mlops_platform/
+
+      - name: Unit tests
+        run: pytest tests/ -v --tb=short
+
+      - name: Validate config files parse cleanly
+        run: |
+          python -c "
+          import yaml, sys
+          for path in ['configs/training.yaml', 'configs/inference.yaml', 'configs/pipeline_contracts.yaml']:
+              try:
+                  yaml.safe_load(open(path))
+                  print(f'OK: {path}')
+              except Exception as e:
+                  print(f'FAIL: {path}: {e}')
+                  sys.exit(1)
+          "
+
+  # ── Model smoke test (only when model code changes) ─────────────────────
+  # Uncomment when you have a training pipeline that can run in CI on synthetic data.
+  # model-smoke-test:
+  #   name: Training smoke test
+  #   runs-on: ubuntu-latest
+  #   if: |
+  #     contains(github.event.head_commit.modified, 'src/pipelines') ||
+  #     contains(github.event.head_commit.modified, 'pipelines/training_pipeline')
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.11"
+  #     - run: pip install pandas scikit-learn pydantic pyyaml
+  #     - name: Run training pipeline on synthetic data
+  #       run: python pipelines/training_pipeline/train.py

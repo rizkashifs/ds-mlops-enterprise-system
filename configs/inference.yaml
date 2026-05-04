@@ -1,10 +1,15 @@
 # Inference (scoring) pipeline configuration.
 
 model:
-  registry_name: "churn-rf"
-  stage: "Production"          # MLflow stage: Production, Staging, Archived
-  # Alternatively, pin to a specific URI:
+  # Option A: local file path (from LocalFileTracker — no MLflow required)
+  # uri: "artifacts/runs/{run_id}/model.joblib"
+
+  # Option B: MLflow runs URI (requires mlflow)
   # uri: "runs:/abc123/model"
+
+  # Option C: MLflow registry lookup (requires mlflow)
+  registry_name: "churn-rf"
+  stage: "Production"
 
 scoring:
   mode: batch                  # batch | online
