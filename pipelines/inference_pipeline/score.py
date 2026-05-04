@@ -1,13 +1,17 @@
 """Inference pipeline orchestrator.
 
-Loads the production model, scores a DataFrame, runs monitoring checks,
-evaluates retraining triggers, and writes output.
-Config-driven — all settings come from configs/inference.yaml.
+Loads a model (from a local path, MLflow URI, or in-memory object), scores a
+DataFrame, runs monitoring checks, and evaluates retraining triggers.
+
+Model source priority:
+  1. model_uri argument (explicit override)
+  2. configs/inference.yaml → model.uri (direct path or MLflow URI)
+  3. configs/inference.yaml → model.registry_name (MLflow registry lookup)
 
 Run with:
   python pipelines/inference_pipeline/score.py
 
-Or import and call run_inference_pipeline() for integration with a scheduler.
+Or import and call run_inference_pipeline() from a scheduler or trigger handler.
 """
 import sys
 from pathlib import Path
@@ -19,13 +23,33 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from mlops_platform.monitoring_hooks.hooks import build_monitoring_report
 from mlops_platform.monitoring_hooks.triggers import TriggerConfig, evaluate_triggers
-from mlops_platform.model_registry.registry import get_production_uri
 from src.services.scoring import score_batch
 
 
 def load_config(path: str = "configs/inference.yaml") -> dict:
     with open(path) as f:
         return yaml.safe_load(f)
+
+
+def _resolve_model_uri(cfg: dict, model_uri_override: str = None) -> str:
+    """Resolve model URI from explicit arg, config direct URI, or MLflow registry."""
+    if model_uri_override:
+        return model_uri_override
+    model_cfg = cfg.get("model", {})
+    if model_cfg.get("uri"):
+        return model_cfg["uri"]
+    # Fall back to MLflow registry lookup
+    registry_name = model_cfg.get("registry_name")
+    if registry_name:
+        try:
+            from mlops_platform.model_registry.registry import get_production_uri
+            return get_production_uri(registry_name)
+        except ImportError:
+            raise ValueError(
+                "mlflow is not installed and no model.uri is set in inference.yaml. "
+                "Either install mlflow or set model.uri to a local model path."
+            )
+    raise ValueError("No model URI configured. Set model.uri in configs/inference.yaml.")
 
 
 def run_inference_pipeline(
@@ -39,37 +63,23 @@ def run_inference_pipeline(
 ) -> dict:
     """Load model, score DataFrame, run monitoring, evaluate retrain triggers.
 
-    Args:
-        df: Input features (must not contain the target column).
-        model_uri: If provided, overrides the registry lookup from config.
-        config_path: Path to the inference config YAML.
-        days_since_last_retrain: Days since last retrain (for time-based trigger).
-        baseline_mean_score: Mean score at training time (for score shift trigger).
-        baseline_metrics: Validation metrics at training time (for perf drop trigger).
-        current_metrics: Windowed metrics from recent actuals (for perf drop trigger).
-
     Returns:
         dict with keys: scores_df, monitoring_report, trigger_decision, num_records
     """
     cfg = load_config(config_path)
 
-    # --- Step 1: Validate input ---
     exclude = cfg["data"].get("exclude_columns", [])
     df = df.drop(columns=[c for c in exclude if c in df.columns])
 
     if df.empty:
         raise ValueError("Input DataFrame is empty — scoring aborted")
 
-    # --- Step 2: Load model ---
-    uri = model_uri or get_production_uri(cfg["model"]["registry_name"])
-
-    # --- Step 3: Score ---
+    uri = _resolve_model_uri(cfg, model_uri)
     result = score_batch(df, uri)
     print(f"Scored {result.num_records:,} records at {result.scored_at}")
 
-    # --- Step 4: Monitoring ---
     report = build_monitoring_report(
-        model_name=cfg["model"]["registry_name"],
+        model_name=cfg["model"].get("registry_name", "model"),
         scores=result.probabilities,
         psi_alert_threshold=cfg["monitoring"]["psi_alert_threshold"],
     )
@@ -80,7 +90,6 @@ def run_inference_pipeline(
         for alert in report.alerts:
             print(f"  {alert}")
 
-    # --- Step 5: Evaluate retraining triggers ---
     trigger_cfg = TriggerConfig(
         psi_alert_threshold=cfg["monitoring"]["psi_alert_threshold"],
     )
@@ -94,15 +103,9 @@ def run_inference_pipeline(
     )
 
     if trigger.should_retrain:
-        urgency_label = f"[{trigger.urgency.upper()}]"
-        print(f"\nRETRAIN {urgency_label} triggered by: {trigger.triggered_by}")
+        print(f"\nRETRAIN [{trigger.urgency.upper()}] triggered by: {trigger.triggered_by}")
         for reason in trigger.reasons:
             print(f"  {reason}")
-        # In production: route to alert system or retrain queue based on urgency
-        # if trigger.urgency == "immediate":
-        #     send_alert(...)
-        # else:
-        #     queue_retrain(...)
 
     return {
         "scores_df": result.to_dataframe(),
@@ -110,4 +113,3 @@ def run_inference_pipeline(
         "trigger_decision": trigger,
         "num_records": result.num_records,
     }
-
