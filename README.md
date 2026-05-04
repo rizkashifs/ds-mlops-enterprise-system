@@ -35,6 +35,22 @@ See `docs/lifecycle.md` for the full layer-by-layer guide.
 
 ---
 
+## Design Principles
+
+These principles govern every decision in the repo. When in doubt, apply them.
+
+| Principle | What it means |
+|---|---|
+| **Reproducibility is non-negotiable** | Data + code + config must produce the same model every time. Data versioning, locked configs, and seeded randomness are not optional. |
+| **Standards define what; teams choose how** | Orchestration, serving, and tracking are defined as standards — not bundled as fixed tools. Teams pick AWS Step Functions or Airflow, MLflow or a local tracker, FastAPI or their own serving layer. |
+| **Config over code** | Every decision point (thresholds, paths, algorithm params, tracker backend) has a config key. Nothing is hardcoded in pipelines. |
+| **Fail fast at validation gates** | Problems caught before production are cheap. Problems caught during scoring are not. Every pipeline has explicit validation gates: data contracts, metric thresholds, fairness checks. |
+| **Incremental adoption** | Teams adopt what they need. MLflow is optional. Orchestration is optional. DVC is optional. The minimum viable implementation is documented for each component. |
+| **Algorithm-independent** | Any sklearn-compatible estimator works — RandomForest, XGBoost, LightGBM, custom. No lock-in. Pass your estimator to `TrainingConfig.estimator`. |
+| **Pluggable tracking** | The `ExperimentTracker` protocol decouples training from tracking. Use `LocalFileTracker` (default), `MLflowTracker`, `NoOpTracker`, or implement your own. |
+
+---
+
 ## Quick Start
 
 ```bash
@@ -133,31 +149,36 @@ ds-mlops-enterprise-system/
 
 ---
 
-## Start Here: Decision Frameworks
+## Decision Frameworks
 
-Before writing any code, read `docs/decision-frameworks.md`. It answers:
+Before writing any code, read `docs/decision-frameworks.md`. These 22 frameworks answer the questions teams ask at the start of every ML project. Using them prevents the most common class of failure: building the wrong thing with the wrong tool.
 
 | Question | Where |
 |---|---|
 | Should I use ML or an LLM? | §1 |
 | Should I use batch or real-time inference? | §2 |
 | When and how should I retrain? | §3 |
-| Should I build or buy? | §4 |
+| Should I build, buy, or use a pre-built API? | §4 |
 | Do I need a simple or complex model? | §5 |
-| Should I use rules, ML, or LLMs? | §7 |
-| How do I set the right decision threshold? | §8 |
-| How much labeled data do I need? | §9 |
-| How do I handle class imbalance? | §10 |
-| Should I build one model or segment it? | §11 |
-| How do I safely roll out a new model? | §12 |
-| Do I need explainability? | §13 |
-| How do I handle label delay? | §14 |
-| Do I need human-in-the-loop? | §15 |
-| How do I test before going live? | §16 |
-| How do I handle missing data? | §17 |
-| Do I need a GPU? | §18 |
+| Do I need a feature store? | §6 |
+| Which deployment strategy — shadow, canary, A/B, or blue-green? | §7 |
+| Should I build one model or segment it? | §8 |
+| Do I need explainability, and how much? | §9 |
+| Should I label manually, programmatically, or use active learning? | §10 |
+| Cloud, on-premise, or hybrid? | §11 |
+| When should I retire a model? | §12 |
+| Do I need a model at all — or will rules do? | §13 |
+| How do I set the right classification threshold? | §14 |
+| How much labeled data do I need? | §15 |
+| How do I handle class imbalance? | §16 |
+| When should I A/B test a new model (champion-challenger)? | §17 |
+| How do I handle label delay? | §18 |
+| Human-in-the-loop or full automation? | §19 |
+| Offline evaluation or online experiment — which comes first? | §20 |
+| Missing data: impute, drop, or model through? | §21 |
+| Do I need a GPU for inference? | §22 |
 
-All 18 frameworks are in `docs/decision-frameworks.md`.
+All 22 frameworks are in `docs/decision-frameworks.md`.
 
 ---
 
@@ -224,13 +245,24 @@ See `docs/data_contract_guide.md` for versioning rules and advanced validation.
 
 ---
 
-## Top Failure Modes to Know
+## Failure Modes
 
-Read `docs/failure-modes.md` before your first production deployment. The top 3:
+Read `docs/failure-modes.md` before your first production deployment. These are the ten most common ways ML systems fail in production and how to prevent them.
 
-1. **Training-serving skew** — features computed differently in training vs. inference
-2. **Data leakage** — a feature that wouldn't exist at prediction time
-3. **Silent drift** — the world changes but no alert fires
+| Failure mode | What goes wrong | Prevention |
+|---|---|---|
+| **Data leakage** | A feature carries future information into training; offline metrics look great, production results collapse | Time-based splits; audit features for target correlation before training |
+| **Training-serving skew** | Features are computed differently in training vs. inference; predictions shift without any model change | Shared feature logic in `src/`; contract validation at serving time |
+| **Silent drift** | The world changes but no alert fires; model degrades unnoticed until a business review | PSI monitoring after every scoring run; threshold alerts wired to on-call |
+| **Broken retraining loops** | Retraining runs on stale or corrupted data; new model is worse but passes offline checks | Data freshness checks; hash validation before training; challenger comparison |
+| **Label leakage** | Labels are computed after the event you're predicting, contaminating training | Define the prediction timestamp; validate that all features predate the label |
+| **Class imbalance blindness** | Model optimises accuracy, ignores the minority class, looks 97% accurate on a 97/3 split | Use F1, precision-recall, ROC-AUC; set `class_weight: balanced`; check confusion matrix |
+| **Evaluation metric mismatch** | Model is tuned on AUC but business cares about precision at a fixed recall | Define the business metric before training; set the threshold explicitly |
+| **Stale features** | A feature pipeline breaks silently; model scores on stale or missing values | Pipeline freshness checks; null-rate monitoring on scoring inputs |
+| **Silent pipeline failures** | A cron job exits non-zero; nobody notices; yesterday's scores are served for a week | Exit-code alerting on every scheduled job — non-negotiable |
+| **Over-reliance on holdout accuracy** | Holdout set leaks over time (same split used across runs); reported accuracy is optimistic | Single holdout evaluation at the end; use time-based splits; track per-segment performance |
+
+Full detail and remediation steps in `docs/failure-modes.md`.
 
 ---
 
